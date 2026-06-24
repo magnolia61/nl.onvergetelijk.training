@@ -47,12 +47,19 @@ function training_civicrm_post($op, $objectName, $objectId, &$objectRef) {
 
         if (!$result_context) return;
 
+        // Markeer deze PID als verwerkt VOOR de toer-check. Het event_type van een
+        // participant wijzigt niet binnen één request, dus zowel voor toer- als voor
+        // gewone deelnemers hoeft deze context-lookup maar één keer per request te draaien.
+        // Voorheen werd de guard alleen in het toer-blok (hieronder) gezet, waardoor
+        // training_post bij een gewone deelnemer 3x draaide (3x Participant.get) als de
+        // participant tijdens één form-submit meermaals werd opgeslagen (form + pecunia-resave).
+        $training_sync_running[$objectId] = TRUE;
+
         $eventtypes = get_event_types();
         $toer_ids   = $eventtypes['toer'] ?? [];
 
         if (in_array($result_context['event_id.event_type_id'] ?? 0, $toer_ids)) {
 
-            $training_sync_running[$objectId] = TRUE;
             $contact_id = $result_context['contact_id'];
 
             // ----------------------------------------------------------------------
